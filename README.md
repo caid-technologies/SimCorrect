@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Status](https://img.shields.io/badge/Status-Active%20Development-orange.svg)
 
-[[Video — Problem 1]](#) &nbsp;|&nbsp; [[OpenCAD]](https://github.com/caid-technologies/OpenCAD)
+[[Video — Problem 1]](#) &nbsp;|&nbsp; [[OpenCAD]](https://github.com/caid-technologies/OpenCAD) &nbsp;|&nbsp; [[CAID Technologies]](http://caid-technologies.com)
 
 ---
 
@@ -21,15 +21,9 @@ SimCorrect is a fully autonomous pipeline for detecting, isolating, and correcti
 
 Simulation is central to modern robot development. Training and validating robot policies in simulation before real-world deployment reduces cost, accelerates iteration, and improves safety. However, the sim-to-real gap — the performance difference between a simulated and physically deployed robot — remains one of the most studied challenges in robotics.
 
-The sim-to-real literature has produced mature solutions for two classes of gap:
+Existing approaches to closing this gap address dynamics discrepancies (friction, mass, contact forces) through domain randomization and system identification, and perceptual discrepancies (visual appearance, lighting, sensor response) through domain adaptation and real-to-sim rendering pipelines.
 
-**The dynamics gap** — discrepancies in friction, mass, contact forces, and actuator response. Addressed by domain randomization (Peng et al., 2018), system identification, and differentiable simulation frameworks including COMPASS (Huang et al., 2023), DREAM (Lou et al., 2024), and gradSim (Murthy et al., 2021).
-
-**The perceptual gap** — discrepancies in visual appearance, lighting, and sensor response. Addressed by domain adaptation, sim-to-real rendering pipelines, and real-to-sim alignment methods such as RialTo (Torne et al., 2024).
-
-A third class of gap has received considerably less systematic attention:
-
-**The geometric gap** — discrepancies between a robot's CAD model and its physical geometry, arising from manufacturing tolerances, part substitutions, assembly errors, and model drift over time.
+A third class of gap has received considerably less systematic attention: **the geometric gap** — discrepancies between a robot's CAD model and its physical geometry, arising from manufacturing tolerances, part substitutions, assembly errors, and model drift over time.
 
 The 2025 Annual Review of Control, Robotics, and Autonomous Systems (Aljalbout et al.) identifies this directly: robot simulations based on CAD files "simplify or omit important physical details," and real-world factors including manufacturing tolerances and mechanical backlash "are rarely modeled" and "can cause self-collisions, unstable motions, or failed task execution."
 
@@ -60,7 +54,7 @@ from opencad import Part, Sketch
 # Correcting a forearm link 37% too short
 Part('forearm').extrude(
     Sketch().circle(r=0.028),
-    depth=0.38          # corrected from 0.24 m
+    depth=0.38
 ).export('forearm.stl')
 
 sim.reload('forearm.stl')
@@ -76,27 +70,13 @@ The corrected simulation re-executes the task under the same joint commands. Suc
 
 ## Key Properties
 
-**Simulation-only operation.** Existing parameter identification methods require real-world robot data to optimize against. SimCorrect detects and corrects geometric faults entirely within simulation, using behavioral divergence between two simulation instances as the detection signal.
+**Simulation-only operation.** SimCorrect detects and corrects geometric faults entirely within simulation, using behavioral divergence between two simulation instances as the detection signal. Hardware is not required until deployment.
 
-**Deterministic fault isolation.** Geometric faults produce exact, reproducible end-effector errors. SimCorrect exploits this determinism to isolate faults precisely — qualitatively different from probabilistic dynamics identification.
+**Deterministic fault isolation.** Geometric faults produce exact, reproducible end-effector errors. SimCorrect exploits this determinism to isolate faults with precision.
 
 **Source-level correction.** Correcting the CAD model propagates automatically to every derived artifact — URDF, MJCF, collision meshes, inertial tensors, motion planning models. One correction fixes the entire simulation stack.
 
 **Zero human intervention.** The full detect-identify-correct-verify loop runs without human input at any stage.
-
----
-
-## Comparison with Related Work
-
-| Method | Gap targeted | Data required | Human involvement | Geometric faults |
-|---|---|---|---|---|
-| Domain Randomization | Dynamics uncertainty | Simulation only | Manual range design | Not addressed |
-| System Identification | Dynamic parameters | Real robot required | Manual experiments | Not addressed |
-| COMPASS (Huang et al., 2023) | Dynamic parameters | Real robot required | Parameter selection | Not addressed |
-| DREAM (Lou et al., 2024) | Mass, geometry from vision | Real robot + camera | Scene setup | Partial — vision-based |
-| TRANSIC (Jiang et al., 2024) | Policy-level gap | Human teleoperation | Human in the loop | Not addressed |
-| RialTo (Torne et al., 2024) | Real-to-sim alignment | Manual scene scanning | Manual scanning | Partial — scene only |
-| **SimCorrect** | **CAD geometric parameters** | **Simulation only** | **Zero** | **Primary target** |
 
 ---
 
@@ -165,6 +145,8 @@ python render_video1_final.py
 | EE error at PICK config | 1.5 mm | 140 mm | 1.5 mm |
 | Grasp success | ✓ | ✗ | ✓ |
 
+Both arms execute identical joint commands. The faulty arm's end-effector falls 14 cm short of the target due to the shortened forearm. SimCorrect detects the grasp failure, isolates the elbow link as the fault source, corrects the geometry via OpenCAD, reloads the simulation. The corrected arm succeeds.
+
 ### Problem 2 — Wrist Offset Fault *(in progress)*
 
 | | Reference Arm | Faulty Arm |
@@ -186,7 +168,7 @@ python render_video1_final.py
 
 **Single-fault assumption.** The current pipeline assumes one geometric fault is present at a time. Multi-fault scenarios require extension of the sensitivity analysis to handle coupled parameter interactions.
 
-**Simulation-internal detection.** Divergence detection currently operates between two simulation instances rather than between a simulation and a physical robot. Extending to real-world sensor data is a necessary step toward full deployment.
+**Simulation-internal detection.** Divergence detection currently operates between two simulation instances. Extending to real-world sensor data is a necessary step toward full deployment.
 
 **Manipulation-specific demonstrations.** The three demonstration scenarios focus on robot arm pick-and-place tasks. Generalization to other robot morphologies and task types has not yet been validated.
 
@@ -240,25 +222,13 @@ simcorrect/
 
 ---
 
-## References
-
-- Aljalbout et al. (2025). *The Reality Gap in Robotics: Challenges, Solutions, and Best Practices.* Annual Review of Control, Robotics, and Autonomous Systems, Vol. 9.
-- Huang et al. (2023). *What Went Wrong? Closing the Sim-to-Real Gap via Differentiable Causal Discovery.* (COMPASS)
-- Lou et al. (2024). *DREAM: Differentiable Real-to-Sim-to-Real Engine for Learning Robotic Manipulation.*
-- Jiang et al. (2024). *TRANSIC: Sim-to-Real Policy Transfer by Learning from Online Correction.* CoRL 2024.
-- Torne et al. (2024). *Reconciling Reality Through Simulation: A Real-to-Sim-to-Real Approach for Robust Manipulation.* RSS 2024.
-- Murthy et al. (2021). *gradSim: Differentiable Simulation for System Identification and Visuomotor Control.*
-- Peng et al. (2018). *Sim-to-Real Transfer of Robotic Control with Dynamics Randomization.* ICRA 2018.
-
----
-
 ## Authors
 
 **Shreya Priya** — Robotics & Autonomy Engineer
 Divergence detection, parameter identification, correction loop, simulation pipeline
 
-**Dean Hu** — Founder, Caid Technologies
-OpenCAD
+**Dean Hu** — Founder, CAID Technologies
+OpenCAD parametric CAD engine, geometry rebuild, STL export pipeline
 
 ---
 
