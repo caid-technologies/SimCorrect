@@ -4,15 +4,11 @@ Video 2: The Robot That Drifts Sideways — Problem 2 Wrist Offset Fault
 UNIT TESTS PASSED:
   BL=0 BR=7 LA=14 RA=19 LG1=17 RG1=22
   3-LINK ARM: j1(shoulder) j2(elbow) j3(wrist pitch)
-  VERTICAL APPROACH: EE points straight DOWN at PICK — approach angle verified
+  VERTICAL APPROACH: EE points straight DOWN at PICK
   GT dist to can: 0.5cm PASS
   Faulty lateral drift: 7.0mm PASS
-  Weld PASS
-  Can ON FLOOR: z=0.000 PASS
-  Can ON TABLE: z=0.615 PASS
-  No table collision PASS
-  Per-frame EE error overlay PASS
-  data.warning check PASS
+  Weld PASS / Can ON FLOOR PASS / Can ON TABLE PASS
+  Per-frame EE error overlay PASS / Sim health check PASS
 """
 import mujoco, numpy as np, tempfile, os, math
 from PIL import Image, ImageDraw, ImageFont
@@ -159,24 +155,20 @@ def build_xml(wrist_y, r_col):
   <light name="fill" pos="-3 3 7"  dir="0.30 -0.28 -0.9" diffuse="0.55 0.60 0.72"/>
   <light name="back" pos="0 5 5"   dir="0 -0.55 -0.82"   diffuse="0.28 0.30 0.42"/>
   <geom type="plane" size="7 7 0.1" material="floor_m"/>
-
   <geom type="cylinder" size="0.042 {BASE_Z/2:.3f}" pos="0 {ARM_L_Y} {BASE_Z/2:.3f}" rgba="{pd}"/>
   <geom type="cylinder" size="0.042 {BASE_Z/2:.3f}" pos="0 {ARM_R_Y} {BASE_Z/2:.3f}" rgba="{pd}"/>
-
   <geom type="box" size="0.28 0.20 0.026" pos="{TABLE_X} {ARM_L_Y} {TLZ:.3f}" rgba="{tb}"/>
   <geom type="cylinder" size="0.015 {TLEG:.3f}" pos="{TABLE_X-0.24} {ARM_L_Y-0.16} {TLEG:.3f}" rgba="{pd}"/>
   <geom type="cylinder" size="0.015 {TLEG:.3f}" pos="{TABLE_X+0.24} {ARM_L_Y-0.16} {TLEG:.3f}" rgba="{pd}"/>
   <geom type="cylinder" size="0.015 {TLEG:.3f}" pos="{TABLE_X-0.24} {ARM_L_Y+0.16} {TLEG:.3f}" rgba="{pd}"/>
   <geom type="cylinder" size="0.015 {TLEG:.3f}" pos="{TABLE_X+0.24} {ARM_L_Y+0.16} {TLEG:.3f}" rgba="{pd}"/>
   <geom type="cylinder" size="0.065 0.004" pos="{TABLE_X} {ARM_L_Y} {TABLE_Z:.3f}" rgba="{gn}"/>
-
   <geom type="box" size="0.28 0.20 0.026" pos="{TABLE_X} {ARM_R_Y} {TLZ:.3f}" rgba="{tb}"/>
   <geom type="cylinder" size="0.015 {TLEG:.3f}" pos="{TABLE_X-0.24} {ARM_R_Y-0.16} {TLEG:.3f}" rgba="{pd}"/>
   <geom type="cylinder" size="0.015 {TLEG:.3f}" pos="{TABLE_X+0.24} {ARM_R_Y-0.16} {TLEG:.3f}" rgba="{pd}"/>
   <geom type="cylinder" size="0.015 {TLEG:.3f}" pos="{TABLE_X-0.24} {ARM_R_Y+0.16} {TLEG:.3f}" rgba="{pd}"/>
   <geom type="cylinder" size="0.015 {TLEG:.3f}" pos="{TABLE_X+0.24} {ARM_R_Y+0.16} {TLEG:.3f}" rgba="{pd}"/>
   <geom type="cylinder" size="0.065 0.004" pos="{TABLE_X} {ARM_R_Y} {TABLE_Z:.3f}" rgba="{gn}"/>
-
   <body name="can_l" pos="{CAN_X} {ARM_L_Y} {CAN_Z}">
     <freejoint name="jcan_l"/>
     <inertial pos="0 0 0" mass="0.35" diaginertia="0.0012 0.0012 0.0005"/>
@@ -191,10 +183,8 @@ def build_xml(wrist_y, r_col):
     <geom type="cylinder" size="0.028 0.005" pos="0 0  {CAN_HALF}" rgba="{ct}"/>
     <geom type="cylinder" size="0.028 0.005" pos="0 0 -{CAN_HALF}" rgba="{ct}"/>
   </body>
-
   {make_arm(ARM_L_Y, WRIST_GT,  "l_", "0.86 0.88 0.96 1")}
   {make_arm(ARM_R_Y, wrist_y,   "r_", r_col)}
-
   <camera name="main" pos="2.4 -2.8 1.4" xyaxes="0.71 0.71 0 -0.22 0.22 0.95" fovy="42"/>
 </worldbody>
 <actuator>
@@ -219,10 +209,8 @@ def build(wrist_y=WRIST_BAD, r_col="0.92 0.18 0.12 1"):
     assert m.jnt_qposadr[0]==BL  and m.jnt_qposadr[1]==BR
     assert m.jnt_qposadr[2]==LA  and m.jnt_qposadr[7]==RA
     assert m.jnt_qposadr[5]==LG1 and m.jnt_qposadr[10]==RG1
-    grey=[i for i in range(m.ngeom)
-          if m.geom_matid[i]==-1
-          and abs(m.geom_rgba[i][0]-0.5)<0.01
-          and abs(m.geom_rgba[i][1]-0.5)<0.01]
+    grey=[i for i in range(m.ngeom) if m.geom_matid[i]==-1
+          and abs(m.geom_rgba[i][0]-0.5)<0.01 and abs(m.geom_rgba[i][1]-0.5)<0.01]
     assert len(grey)==0, f"Grey geoms: {grey}"
     return m, mujoco.MjData(m)
 
@@ -231,10 +219,10 @@ def ee_pos(m,d,name):
     return d.site_xpos[sid].copy()
 
 def check_sim_health(d):
-    warnings=[]
-    if np.any(np.abs(d.qpos)>50): warnings.append("qpos overflow")
-    if np.any(np.abs(d.qvel)>200): warnings.append("qvel overflow")
-    return "; ".join(warnings) if warnings else None
+    w=[]
+    if np.any(np.abs(d.qpos)>50): w.append("qpos overflow")
+    if np.any(np.abs(d.qvel)>200): w.append("qvel overflow")
+    return "; ".join(w) if w else None
 
 def fnt(sz,bold=False):
     for p in ["/System/Library/Fonts/HelveticaNeue.ttc",
@@ -247,10 +235,8 @@ def fnt(sz,bold=False):
 def title_card():
     img=Image.new("RGB",(W,H),(8,10,18)); dr=ImageDraw.Draw(img)
     dr.rectangle([(0,H//2-230),(W,H//2-145)],fill=(48,5,5))
-    dr.text((W//2-225,H//2-220),"VIDEO 2 OF 3  —  FAULT: WRIST LATERAL OFFSET",
-            font=fnt(20,True),fill=(200,72,52))
-    dr.text((W//2-560,H//2-132),"The Robot That Drifts Sideways",
-            font=fnt(64,True),fill=(255,215,45))
+    dr.text((W//2-225,H//2-220),"VIDEO 2 OF 3  —  FAULT: WRIST LATERAL OFFSET",font=fnt(20,True),fill=(200,72,52))
+    dr.text((W//2-560,H//2-132),"The Robot That Drifts Sideways",font=fnt(64,True),fill=(255,215,45))
     dr.line([(W//2-560,H//2-16),(W//2+560,H//2-16)],fill=(30,40,70),width=2)
     rows=[("PROBLEM: ","Right arm wrist has 7mm lateral offset vs CAD specification.",(238,88,68)),
           ("EFFECT:  ","Identical commands. Faulty arm drifts sideways, misses can.",(210,158,75)),
@@ -259,9 +245,7 @@ def title_card():
         y=H//2+8+i*62
         dr.text((W//2-560,y),lbl,font=fnt(22,True),fill=col)
         dr.text((W//2-356,y),txt,font=fnt(22),fill=(196,204,215))
-    dr.text((W//2-350,H//2+228),
-            "LEFT = Ground Truth     RIGHT = Faulty  →  Corrected",
-            font=fnt(20),fill=(90,118,170))
+    dr.text((W//2-350,H//2+228),"LEFT = Ground Truth     RIGHT = Faulty  →  Corrected",font=fnt(20),fill=(90,118,170))
     return np.array(img)
 
 def freeze_panel(raw):
@@ -271,17 +255,11 @@ def freeze_panel(raw):
     bx1,by1=W//2-640,H//2-310; bx2,by2=W//2+640,H//2+310
     dr.rectangle([(bx1,by1),(bx2,by2)],fill=(4,6,12),outline=(30,190,88),width=3)
     dr.rectangle([(bx1,by1),(bx2,by1+72)],fill=(4,22,10))
-    dr.text((bx1+26,by1+18),"OpenCAD — Autonomous Fault Detection & Correction",
-            font=fnt(26,True),fill=(34,205,92))
-    steps=[
-        ("01","FAULT DETECTED",
-         "Lateral EE drift 7.0mm — faulty arm misses can sideways",(238,70,50)),
-        ("02","ROOT CAUSE",
-         "wrist_offset_y = 0.007m   (correct = 0.000m,  Δ = +7mm)",(255,178,50)),
-        ("03","RUNNING OpenCAD",
-         "Part('wrist').set_offset(y=0.000).export('wrist_corrected.stl')",(66,142,225)),
-        ("04","APPLIED",
-         "Geometry rebuilt → MJCF reloaded → reset → verified",(34,205,92))]
+    dr.text((bx1+26,by1+18),"OpenCAD — Autonomous Fault Detection & Correction",font=fnt(26,True),fill=(34,205,92))
+    steps=[("01","FAULT DETECTED","Lateral EE drift 7.0mm — faulty arm misses can sideways",(238,70,50)),
+           ("02","ROOT CAUSE","wrist_offset_y = 0.007m   (correct = 0.000m,  Δ = +7mm)",(255,178,50)),
+           ("03","RUNNING OpenCAD","Part('wrist').set_offset(y=0.000).export('wrist_corrected.stl')",(66,142,225)),
+           ("04","APPLIED","Geometry rebuilt → MJCF reloaded → reset → verified",(34,205,92))]
     for i,(num,title,desc,col) in enumerate(steps):
         y=by1+84+i*100
         dr.rectangle([(bx1+26,y),(bx1+80,y+64)],fill=col)
@@ -291,37 +269,31 @@ def freeze_panel(raw):
         dr.line([(bx1+26,y+64),(bx2-26,y+64)],fill=(14,20,36),width=1)
     cy=by1+488
     dr.rectangle([(bx1+26,cy),(bx2-26,cy+84)],fill=(2,4,10))
-    for i,line in enumerate([
-            "from opencad import Part, Sketch",
-            "Part('wrist').set_offset(y=0.000).export('wrist_corrected.stl')",
-            "sim.reload('wrist_corrected.stl')   # zero human intervention"]):
-        dr.text((bx1+48,cy+8+i*24),line,font=fnt(17),
-                fill=(165,124,250) if i==0 else (145,208,135))
+    for i,line in enumerate(["from opencad import Part, Sketch",
+                              "Part('wrist').set_offset(y=0.000).export('wrist_corrected.stl')",
+                              "sim.reload('wrist_corrected.stl')   # zero human intervention"]):
+        dr.text((bx1+48,cy+8+i*24),line,font=fnt(17),fill=(165,124,250) if i==0 else (145,208,135))
     dr.rectangle([(bx1+26,by2-54),(bx2-26,by2-18)],fill=(12,148,48))
-    dr.text((W//2-270,by2-46),"✓  Correction complete — reloading corrected arm...",
-            font=fnt(21,True),fill=(255,255,255))
+    dr.text((W//2-270,by2-46),"✓  Correction complete — reloading corrected arm...",font=fnt(21,True),fill=(255,255,255))
     return np.array(img)
 
 def overlay(raw, t, phase, grasp_l, grasp_r, l_ee, r_ee):
     img=Image.fromarray(raw).convert("RGB"); ov=ImageDraw.Draw(img,"RGBA")
     hw=W//2; ov.line([(hw,0),(hw,H)],fill=(255,255,255,40),width=2)
     if phase==1:
-        ov.rectangle([(0,0),(hw,88)],fill=(4,8,16,255))
-        ov.rectangle([(hw,0),(W,88)],fill=(32,4,4,255))
+        ov.rectangle([(0,0),(hw,88)],fill=(4,8,16,255)); ov.rectangle([(hw,0),(W,88)],fill=(32,4,4,255))
         ov.text((18,8),"GROUND TRUTH",font=fnt(28,True),fill=(70,220,108))
         ov.text((18,50),"Wrist offset: 0.000m  ✓",font=fnt(15),fill=(58,168,86))
         ov.text((hw+18,8),"FAULTY ARM",font=fnt(28,True),fill=(235,58,38))
         ov.text((hw+18,50),"Wrist offset: +7mm lateral",font=fnt(15),fill=(180,78,58))
     elif phase==2:
-        ov.rectangle([(0,0),(hw,88)],fill=(4,8,16,255))
-        ov.rectangle([(hw,0),(W,88)],fill=(32,4,4,255))
+        ov.rectangle([(0,0),(hw,88)],fill=(4,8,16,255)); ov.rectangle([(hw,0),(W,88)],fill=(32,4,4,255))
         ov.text((18,8),"GROUND TRUTH",font=fnt(28,True),fill=(70,220,108))
         ov.text((18,50),"Can placed on green target ✓",font=fnt(15),fill=(58,168,86))
         ov.text((hw+18,8),"FAULTY ARM",font=fnt(28,True),fill=(235,58,38))
         ov.text((hw+18,50),"Drifted sideways — grasp failed",font=fnt(15),fill=(180,78,58))
     else:
-        ov.rectangle([(0,0),(hw,88)],fill=(4,8,16,255))
-        ov.rectangle([(hw,0),(W,88)],fill=(3,16,32,255))
+        ov.rectangle([(0,0),(hw,88)],fill=(4,8,16,255)); ov.rectangle([(hw,0),(W,88)],fill=(3,16,32,255))
         ov.text((18,8),"GROUND TRUTH",font=fnt(28,True),fill=(70,220,108))
         ov.text((18,50),"Placing again — perfect",font=fnt(15),fill=(58,168,86))
         ov.text((hw+18,8),"CORRECTED ARM",font=fnt(28,True),fill=(32,190,225))
@@ -346,10 +318,9 @@ def overlay(raw, t, phase, grasp_l, grasp_r, l_ee, r_ee):
         _result(ov,hw//2,    H-175,True,"ON TARGET","")
         _result(ov,hw+hw//2, H-175,True,"ON TARGET","OpenCAD corrected ✓")
     ct=H-88; ov.rectangle([(0,ct),(W,H)],fill=(3,4,8,255))
-    msgs={
-        1:("Identical 3-DOF commands. Faulty wrist +7mm — EE drifts sideways.",(235,88,68)),
-        2:("Left placed on green target. Right wrist offset caused lateral grasp failure.",(200,120,60)),
-        3:("OpenCAD corrected wrist. Both arms place precisely on green target.",(32,190,225))}
+    msgs={1:("Identical 3-DOF commands. Faulty wrist +7mm — EE drifts sideways.",(235,88,68)),
+          2:("Left placed on green target. Right wrist offset caused lateral grasp failure.",(200,120,60)),
+          3:("OpenCAD corrected wrist. Both arms place precisely on green target.",(32,190,225))}
     txt,col=msgs.get(phase,("",""))
     ov.text((18,ct+16),txt,font=fnt(18,True),fill=col)
     ov.text((W-175,ct+30),f"t={t:.1f}s / {DUR}s",font=fnt(14),fill=(48,65,95))
@@ -383,11 +354,9 @@ def main():
     assert np.allclose(data.qpos[BL:BL+3],CAN_L,atol=0.001)
     assert np.allclose(data.qpos[BR:BR+3],CAN_R,atol=0.001)
     print("    Weld OK")
-    warn=check_sim_health(data); assert warn is None
-    print("    Sim health OK")
+    warn=check_sim_health(data); assert warn is None; print("    Sim health OK")
     data.qpos[LA:LA+3]=PLACE_Q; mujoco.mj_kinematics(model,data)
-    assert np.linalg.norm(ee_pos(model,data,"l_ee")-TABLE_L)<0.06
-    print("    PLACE_Q→table OK")
+    assert np.linalg.norm(ee_pos(model,data,"l_ee")-TABLE_L)<0.06; print("    PLACE_Q→table OK")
     model2,data2=build(WRIST_GT,"0.04 0.54 0.74 1")
     data2.qpos[LA:LA+3]=PICK_Q; data2.qpos[RA:RA+3]=PICK_Q
     mujoco.mj_kinematics(model2,data2)
@@ -397,20 +366,15 @@ def main():
     print(f"    TABLE_L z={TABLE_L[2]:.3f} ON TABLE  OK")
     print(f"    Grip gap={GRIP_OPEN*2:.3f}m > can diam {0.033*2:.3f}m  OK")
     print("\n    ALL CHECKS PASSED\n")
-
     print("[2] Initialise scene...")
     data.qpos[LA:LA+3]=HOME_Q; data.qpos[RA:RA+3]=HOME_Q
     data.ctrl[0:3]=HOME_Q; data.ctrl[5:8]=HOME_Q
     data.ctrl[3]=GRIP_OPEN; data.ctrl[4]=GRIP_OPEN
     data.ctrl[8]=GRIP_OPEN; data.ctrl[9]=GRIP_OPEN
-    weld(data,BL,CAN_L); weld(data,BR,CAN_R)
-    mujoco.mj_forward(model,data)
-
+    weld(data,BL,CAN_L); weld(data,BR,CAN_R); mujoco.mj_forward(model,data)
     cam_id=mujoco.mj_name2id(model,mujoco.mjtObj.mjOBJ_CAMERA,"main")
     renderer=mujoco.Renderer(model,height=H,width=W)
-    sim_dt=model.opt.timestep
-    r_every=max(1,round(1.0/(FPS*sim_dt)))
-    total=FPS*DUR
+    sim_dt=model.opt.timestep; r_every=max(1,round(1.0/(FPS*sim_dt))); total=FPS*DUR
     frames=[]; t=0.0; step=0; fc=0
     phase=1; corrected=False
     in_freeze=False; freeze_count=0; freeze_total=int(FREEZE_DUR*FPS)
@@ -420,9 +384,7 @@ def main():
     dropped_l=False; dropped_r=False
     cl_pos=CAN_L.copy(); cr_pos=CAN_R.copy()
     cur_l_ee=None; cur_r_ee=None
-
     print(f"[3] Rendering {total} frames ({DUR}s @ {FPS}fps)  ->  {OUT}")
-
     while fc<total:
         if not in_freeze:
             if not corrected:
@@ -435,8 +397,7 @@ def main():
             data.ctrl[3]=g_l; data.ctrl[4]=g_l
             data.ctrl[8]=g_r; data.ctrl[9]=g_r
             mujoco.mj_kinematics(model,data)
-            l_ee=ee_pos(model,data,"l_ee")
-            r_ee=ee_pos(model,data,"r_ee")
+            l_ee=ee_pos(model,data,"l_ee"); r_ee=ee_pos(model,data,"r_ee")
             cur_l_ee=l_ee.copy(); cur_r_ee=r_ee.copy()
             if not corrected:
                 if not grasp_l and g_l<GRIP_OPEN*0.65 and np.linalg.norm(l_ee-cl_pos)<0.09:
@@ -444,8 +405,7 @@ def main():
                 if carrying_l:
                     cl_pos=l_ee.copy()
                     if t>=T_HOLD and not dropped_l:
-                        dropped_l=True; carrying_l=False
-                        cl_pos=TABLE_L.copy(); phase=2
+                        dropped_l=True; carrying_l=False; cl_pos=TABLE_L.copy(); phase=2
             else:
                 lt=t-T_RESUME+T_REACH; _,g_l2,_=ref_ctrl(lt)
                 if not carrying_l and not dropped_l and g_l2<GRIP_OPEN*0.65 and np.linalg.norm(l_ee-cl_pos)<0.09:
@@ -460,19 +420,16 @@ def main():
                     cr_pos=r_ee.copy()
                     if t>=T_HOLD2 and not dropped_r:
                         dropped_r=True; carrying_r=False; cr_pos=TABLE_R.copy()
-            weld(data,BL,cl_pos); weld(data,BR,cr_pos)
-            mujoco.mj_forward(model,data)
+            weld(data,BL,cl_pos); weld(data,BR,cr_pos); mujoco.mj_forward(model,data)
             if step%2500==0:
                 warn=check_sim_health(data)
                 if warn: print(f"    WARNING t={t:.1f}s: {warn}")
             t+=sim_dt; step+=1
-
         if t>=T_FREEZE and not corrected and not in_freeze:
             print(f"    [{t:.1f}s] Freeze — OpenCAD panel")
             renderer.update_scene(data,camera=cam_id)
             freeze_img=freeze_panel(renderer.render().copy())
             in_freeze=True; freeze_count=0
-
         if in_freeze:
             frames.append(np.array(freeze_img)); fc+=1; freeze_count+=1
             if freeze_count>=freeze_total:
@@ -485,15 +442,12 @@ def main():
                 data.ctrl[0:3]=HOME_Q; data.ctrl[5:8]=HOME_Q
                 data.ctrl[3]=GRIP_OPEN; data.ctrl[4]=GRIP_OPEN
                 data.ctrl[8]=GRIP_OPEN; data.ctrl[9]=GRIP_OPEN
-                weld(data,BL,cl_pos); weld(data,BR,cr_pos)
-                mujoco.mj_forward(model,data)
+                weld(data,BL,cl_pos); weld(data,BR,cr_pos); mujoco.mj_forward(model,data)
                 corrected=True; phase=3; in_freeze=False; flash=28
-                dropped_l=False; dropped_r=False
-                carrying_l=False; carrying_r=False
+                dropped_l=False; dropped_r=False; carrying_l=False; carrying_r=False
                 grasp_l=False; grasp_r=False
             if fc%FPS==0: print(f"    {fc:4d}/{total}  FREEZE")
             continue
-
         if step%r_every==0:
             do_flash=flash>0; flash=max(0,flash-1)
             if t<T_TITLE:
@@ -503,8 +457,7 @@ def main():
                 raw=renderer.render().copy()
                 if do_flash:
                     fl=Image.new("RGBA",(W,H),(255,255,255,70))
-                    raw=np.array(Image.alpha_composite(
-                        Image.fromarray(raw).convert("RGBA"),fl).convert("RGB"))
+                    raw=np.array(Image.alpha_composite(Image.fromarray(raw).convert("RGBA"),fl).convert("RGB"))
                 frm=overlay(raw,t,phase,grasp_l,grasp_r,cur_l_ee,cur_r_ee)
             frames.append(frm); fc+=1
             if fc%FPS==0:
@@ -512,7 +465,6 @@ def main():
                       f"cl_z={cl_pos[2]:.3f} cr_z={cr_pos[2]:.3f} "
                       f"carry=({int(carrying_l)},{int(carrying_r)}) "
                       f"grasp=({int(grasp_l)},{int(grasp_r)})")
-
     print(f"\n[4] Writing {OUT}...")
     iio.imwrite(OUT,frames,fps=FPS,codec="libx264",
                 output_params=["-crf","13","-pix_fmt","yuv420p","-preset","slow"])
