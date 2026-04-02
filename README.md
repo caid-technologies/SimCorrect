@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Status](https://img.shields.io/badge/Status-Active%20Development-orange.svg)
 
-[[Video — Problem 1]](#) &nbsp;|&nbsp; [[OpenCAD]](https://github.com/caid-technologies/OpenCAD) &nbsp;|&nbsp; [[CAID Technologies]](http://caid-technologies.com)
+[[Video — Problem 1]](#) &nbsp;|&nbsp; [[OpenCAD]](https://github.com/caid-technologies/OpenCAD)
 
 ---
 
@@ -116,8 +116,8 @@ The corrected simulation re-executes the task under the same joint commands. Suc
 
 ## Installation
 ```bash
-git clone https://github.com/caid-technologies/simcorrect.git
-cd simcorrect
+git clone https://github.com/caid-technologies/SimCorrect.git
+cd SimCorrect
 conda create -n simcorrect python=3.10
 conda activate simcorrect
 pip install mujoco numpy pillow imageio[ffmpeg]
@@ -129,7 +129,7 @@ pip install opencad
 ## Quickstart — Problem 1
 ```bash
 cd Problem1_ForearmLength
-python render_video1_final.py
+python render_demo.py
 # Output: ~/Desktop/Video1_CantReach.mp4
 ```
 
@@ -151,9 +151,10 @@ Both arms execute identical joint commands. The faulty arm's end-effector falls 
 
 | | Reference Arm | Faulty Arm |
 |---|---|---|
-| Wrist lateral offset | 0.085 m | 0.092 m (+7.7%) |
-| Lateral EE error | ~0 mm | ~12 mm |
-| Error growth with reach | No | Yes |
+| Wrist lateral offset | 0.000 m | 0.007 m (+7.7%) |
+| Lateral EE error | ~0 mm | ~7 mm |
+| Joint RMSE | ~0 rad | ~0 rad (fault invisible in joint space) |
+| Grasp success | ✓ | ✗ |
 
 ### Problem 3 — Joint Friction Fault *(in progress)*
 
@@ -192,15 +193,21 @@ Both arms execute identical joint commands. The faulty arm's end-effector falls 
 
 ## Repository Structure
 ```
-simcorrect/
+SimCorrect/
 ├── README.md
 ├── Problem1_ForearmLength/
-│   ├── render_video1_final.py
+│   ├── sim_pair.py
 │   ├── divergence_detector.py
 │   ├── parameter_identifier.py
 │   ├── correction_and_validation.py
+│   ├── render_demo.py
 │   └── README.md
 ├── Problem2_WristOffset/
+│   ├── sim_pair.py
+│   ├── divergence_detector.py
+│   ├── parameter_identifier.py
+│   ├── correction_and_validation.py
+│   ├── render_demo.py
 │   └── README.md
 └── Problem3_JointFriction/
     └── README.md
@@ -216,7 +223,7 @@ simcorrect/
   author    = {Priya, Shreya and Hu, Dean},
   year      = {2026},
   publisher = {CAID Technologies},
-  url       = {https://github.com/caid-technologies/simcorrect}
+  url       = {https://github.com/caid-technologies/SimCorrect}
 }
 ```
 
