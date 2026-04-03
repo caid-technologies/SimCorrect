@@ -1,6 +1,6 @@
 # SimCorrect: CAD Geometry Fault Detection and Correction for Sim-to-Real Gap Closure
 
-**Shreya Priya, Dean Hu**
+**Shreya Priya, Dean (Dien) Hu**
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![MuJoCo](https://img.shields.io/badge/MuJoCo-3.x-green.svg)
