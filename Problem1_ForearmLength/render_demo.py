@@ -22,7 +22,7 @@ print("="*65)
 W, H   = 1920, 1080
 FPS    = 30
 DUR    = 90
-OUT    = os.path.expanduser("~/Desktop/Video1_CantReach.mp4")
+OUT    = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Video1_CantReach.mp4")
 
 # ── VERIFIED JOINT CONFIGS ────────────────────────────────────────
 HOME_Q  = np.array([0,  1.10, -2.00, -0.70])
@@ -32,7 +32,7 @@ LIFT_Q  = np.array([0,  0.65, -0.90, -1.20])
 PLACE_Q = np.array([np.pi,-0.20,-1.45,  1.90])
 
 # ── SCENE POSITIONS ──────────────────────────────────────────────
-ARM_L_Y = -0.55;  ARM_R_Y =  0.55
+ARM_L_Y = -0.35;  ARM_R_Y =  0.35
 CAN_L   = np.array([ 0.75, ARM_L_Y, 0.11])
 CAN_R   = np.array([ 0.75, ARM_R_Y, 0.11])
 TABLE_L = np.array([-0.75, ARM_L_Y, 0.632])
