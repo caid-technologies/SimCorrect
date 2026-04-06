@@ -13,7 +13,7 @@
 
 ## Overview
 
-SimCorrect is a fully autonomous pipeline for detecting, isolating, and correcting geometric faults in robot CAD models that cause sim-to-real performance gaps. Two simulation instances run side by side under identical joint commands — one with ground-truth geometry, one with an injected geometric fault. SimCorrect identifies the faulty CAD parameter, corrects it programmatically via the OpenCAD API, reloads the simulation, and verifies task success. No human intervention. No real-world hardware. No additional data collection.
+SimCorrect is a fully automated pipeline for detecting, isolating, and correcting geometric faults in robot CAD models that cause sim-to-real performance gaps. Two simulation instances run side by side under identical joint commands — one with ground-truth geometry, one with an injected geometric fault. SimCorrect identifies the faulty CAD parameter, corrects it programmatically via the OpenCAD API, reloads the simulation, and verifies task success. No human intervention. No real-world hardware. No additional data collection.
 
 ---
 
@@ -47,7 +47,7 @@ Sensitivity analysis traces the detected divergence to its source CAD parameter.
 
 ### Stage 3 — Autonomous Correction via OpenCAD
 
-The identified parameter is corrected programmatically through the **OpenCAD API** — a modular, service-oriented parametric CAD engine developed by CAID Technologies. OpenCAD rebuilds the affected geometry from first principles, exports the corrected file, and reloads the simulation:
+The identified parameter is corrected programmatically through the **OpenCAD API** — AI-native parametric CAD by Caid Technologies. OpenCAD rebuilds the affected geometry from first principles, exports the corrected file, and reloads the simulation:
 ```python
 from opencad import Part, Sketch
 
@@ -182,7 +182,7 @@ Both arms execute identical joint commands. The faulty arm's end-effector falls 
 | Component | Technology |
 |---|---|
 | Physics engine | MuJoCo 3.x |
-| CAD correction engine | OpenCAD API — CAID Technologies |
+| CAD correction | OpenCAD API — Caid Technologies |
 | Divergence detection | End-effector trajectory analysis |
 | Parameter identification | Sensitivity-based geometric analysis |
 | Visualization | MuJoCo offscreen renderer |
@@ -235,7 +235,7 @@ SimCorrect/
 Divergence detection, parameter identification, correction loop, simulation pipeline
 
 **Dean (Dien) Hu** — Founder, Caid Technologies
-OpenCAD parametric CAD, geometry rebuild, STL/STEP export pipeline
+OpenCAD AI-native parametric CAD, geometry rebuild, STL/STEP export pipeline
 
 ---
 
