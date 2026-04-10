@@ -221,7 +221,7 @@ SimCorrect/
                for Sim-to-Real Gap Closure in Robot Manipulation},
   author    = {Priya, Shreya and Hu, Dean},
   year      = {2026},
-  publisher = {CAID Technologies},
+  publisher = {Caid Technologies},
   url       = {https://github.com/caid-technologies/SimCorrect}
 }
 ```
