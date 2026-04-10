@@ -230,7 +230,7 @@ SimCorrect/
 
 ## Authors
 
-**Shreya Priya** — Robotics & Autonomy Engineer
+**Shreya Priya** — Robotics Engineer & Researcher
 Divergence detection, parameter identification, correction loop, simulation pipeline
 
 **Dean (Dien) Hu** — Founder, Caid Technologies
