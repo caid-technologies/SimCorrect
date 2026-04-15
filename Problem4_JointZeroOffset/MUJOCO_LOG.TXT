@@ -1,0 +1,6 @@
+Wed Apr 15 09:32:05 2026
+WARNING: Nan, Inf or huge value in QPOS at DOF 5. The simulation is unstable. Time = 0.0100.
+
+Wed Apr 15 09:32:49 2026
+WARNING: Nan, Inf or huge value in QPOS at DOF 5. The simulation is unstable. Time = 0.0100.
+
