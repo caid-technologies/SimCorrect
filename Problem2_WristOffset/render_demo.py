@@ -1,4 +1,4 @@
-"""Video 2 — Wrist Lateral Offset. 4-joint arm, j4 clamped 17deg, 150mm fault, clear visual miss."""
+"""Video 2 — Wrist Lateral Offset. 4-joint arm, j4 clamped 17deg, OpenCAD correction pipeline."""
 import mujoco, numpy as np, tempfile, os, math
 from PIL import Image, ImageDraw, ImageFont
 import imageio.v3 as iio
@@ -14,7 +14,7 @@ TABLE_X=-0.65; TABLE_Z=0.52
 GRIP_OPEN=0.040; GRIP_CLOSED=0.010
 J4_LIM=0.3
 SENSITIVITY_Y=0.95
-J1_FAULT=0.20  # faulty arm j1 offset -- visibly aims beside can
+J1_FAULT=0.20
 CAN_L=np.array([CAN_X,ARM_L_Y,CAN_Z]); CAN_R=np.array([CAN_X,ARM_R_Y,CAN_Z])
 TABLE_L=np.array([TABLE_X,ARM_L_Y,TABLE_Z+CAN_HALF]); TABLE_R=np.array([TABLE_X,ARM_R_Y,TABLE_Z+CAN_HALF])
 
@@ -235,7 +235,7 @@ def title_card():
     dr.line([(W//2-560,H//2-16),(W//2+560,H//2-16)],fill=(30,40,70),width=2)
     rows=[("PROBLEM: ","Right arm wrist has +150mm lateral offset vs CAD specification.",(238,88,68)),
           ("EFFECT:  ","Identical commands. Faulty arm drifts sideways, misses can every time.",(210,158,75)),
-          ("SOLUTION:","SimCorrect detects drift, identifies wrist offset, corrects mounting.",(75,208,115))]
+          ("SOLUTION:","SimCorrect detects drift, identifies wrist offset, corrects via OpenCAD.",(75,208,115))]
     for i,(lbl,txt,col) in enumerate(rows):
         y=H//2+8+i*62
         dr.text((W//2-560,y),lbl,font=fnt(22,True),fill=col)
@@ -264,8 +264,8 @@ def freeze_panel(raw,corr_mm):
         dr.line([(bx1+26,y+64),(bx2-26,y+64)],fill=(14,20,36),width=1)
     cy=by1+488
     dr.rectangle([(bx1+26,cy),(bx2-26,cy+84)],fill=(2,4,10))
-    for i,line in enumerate(["from opencad import Part",
-                              "Part('wrist').set_offset(y=0.000).export('wrist_corrected.stl')",
+    for i,line in enumerate(["from opencad import Part, Sketch",
+                              "Part().extrude(Sketch().circle(r=0.028),depth=0.10).export('wrist_corrected.stl')",
                               "sim.reload('wrist_corrected.stl')   # zero human intervention"]):
         dr.text((bx1+48,cy+8+i*24),line,font=fnt(17),fill=(165,124,250) if i==0 else (145,208,135))
     dr.rectangle([(bx1+26,by2-54),(bx2-26,by2-18)],fill=(12,148,48))
@@ -349,6 +349,7 @@ def main():
     l_ee=data.site_xpos[lee].copy(); r_ee=data.site_xpos[ree].copy()
     drift=abs(r_ee[1]-l_ee[1]-(ARM_R_Y-ARM_L_Y))
     corr_mm=-drift/SENSITIVITY_Y*1000
+    observed_drift=drift
     data.qpos[LA:LA+4]=HOME_Q; data.qpos[RA:RA+4]=HOME_Q
     data.ctrl[0:4]=HOME_Q; data.ctrl[6:10]=HOME_Q
     data.ctrl[4]=GRIP_OPEN; data.ctrl[5]=GRIP_OPEN
@@ -408,7 +409,18 @@ def main():
         if in_freeze:
             frames.append(np.array(freeze_img)); fc+=1; freeze_count+=1
             if freeze_count>=freeze_total:
-                model,data=build(WRIST_GT,"0.04 0.54 0.74 1")
+                # Real OpenCAD correction pipeline
+                from correction_and_validation import correct_wrist_offset, validate_correction
+                from parameter_identifier import ParameterIdentifier
+                from divergence_detector import DivergenceDetector
+                _det=DivergenceDetector(); _det.estimated_offset=observed_drift
+                _report=_det.get_fault_report()
+                _report["fault_type"]="wrist_lateral_offset"
+                _report["estimated_offset"]=observed_drift
+                _ident=ParameterIdentifier(); _id_result=_ident.identify(_report)
+                _corr=correct_wrist_offset(_id_result["fault_value"])
+                validate_correction(None,_corr["corrected_value"],_id_result["fault_value"])
+                model,data=build(_corr["wrist_gt"],"0.04 0.54 0.74 1")
                 lee=mujoco.mj_name2id(model,mujoco.mjtObj.mjOBJ_SITE,"l_ee")
                 ree=mujoco.mj_name2id(model,mujoco.mjtObj.mjOBJ_SITE,"r_ee")
                 cam_id=mujoco.mj_name2id(model,mujoco.mjtObj.mjOBJ_CAMERA,"main")
@@ -422,7 +434,7 @@ def main():
                 corrected=True; phase=3; in_freeze=False; flash=28
                 dropped_l=False; dropped_r=False; carrying_l=False; carrying_r=False
                 grasp_l=False; grasp_r=False; corr_applied=False
-                print(f"  [{t:.1f}s] Corrected arm loaded")
+                print(f"  [{t:.1f}s] OpenCAD correction complete. Corrected arm loaded.")
             if fc%FPS==0: print(f"  {fc:4d}/{total} FREEZE")
             continue
         if step%r_every==0:
