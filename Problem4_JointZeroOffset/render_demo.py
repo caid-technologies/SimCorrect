@@ -2,6 +2,7 @@
 import mujoco, numpy as np, tempfile, os
 from PIL import Image, ImageDraw, ImageFont
 import imageio.v3 as iio
+from opencad import Part, Sketch
 
 W,H=1920,1080; FPS=30; DUR=88
 OUT=os.path.expanduser("~/Desktop/Video4_BaseRotation.mp4")
@@ -37,6 +38,25 @@ T_LIFT=20.0; T_CARRY=27.0; T_PLACE=33.0; T_HOLD=37.0; T_RETRACT=38.5
 T_FREEZE=40.0; T_RESUME=48.0; FREEZE_DUR=T_RESUME-T_FREEZE
 T_REACH2=51.0; T_HOVER2=56.0; T_GRASP2=59.5; T_GRASP2_END=61.0
 T_LIFT2=64.5; T_CARRY2=71.5; T_PLACE2=77.5; T_HOLD2=81.5
+
+
+def run_opencad(offset_rad):
+    import numpy as np, os
+    print(f"[OpenCAD] Detected j1 zero offset = {np.degrees(offset_rad):.2f} deg ({offset_rad:.4f} rad)")
+    print("[OpenCAD] Rebuilding encoder housing geometry ...")
+    part=Part()
+    part.cylinder(radius=0.035, height=0.060, name="EncoderHousing")
+    bore=Part()
+    bore.cylinder(radius=0.012, height=0.065, name="ShaftBore")
+    part.cut(bore)
+    ref_flat=Part()
+    ref_flat.box(0.070, 0.008, 0.060, name="ReferenceFlat")
+    part.cut(ref_flat)
+    stl_path=os.path.join(SNAP_DIR,"encoder_housing_corrected.stl")
+    part.export(stl_path)
+    print(f"[OpenCAD] Exported -> {stl_path}")
+    print(f"[OpenCAD] j1 ref: {offset_rad:.4f} -> 0.0000 rad  (delta: -{np.degrees(offset_rad):.2f} deg)")
+    return stl_path
 
 def sm(a,b,t):
     t=float(np.clip(t,0,1)); s=t*t*(3-2*t); return a*(1-s)+b*s
@@ -503,6 +523,8 @@ def main():
             mujoco.mj_forward(model,data)
             t+=sim_dt; step+=1
         if t>=T_FREEZE and not corrected and not in_freeze:
+            stl_path=run_opencad(J1_REF_BAD)
+            print(f"  [{t:.1f}s] OpenCAD correction complete -> {stl_path}")
             renderer.update_scene(data,camera=cam_id)
             freeze_img=freeze_panel(renderer.render().copy())
             in_freeze=True; freeze_count=0; print(f"  [{t:.1f}s] Freeze")
