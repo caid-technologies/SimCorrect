@@ -19,7 +19,7 @@ def correct_wrist_offset(detected_offset_y):
     print(f"[OpenCAD] Detected wrist_offset_y = {detected_offset_y*1000:.1f}mm")
     print(f"[OpenCAD] Rebuilding wrist geometry with offset_y = 0.000m ...")
     part   = Part()
-    sketch = Sketch().circle(r=WRIST_RADIUS)
+    sketch = Sketch().circle(WRIST_RADIUS)
     part.extrude(sketch, depth=WRIST_DEPTH)
     stl_path = os.path.join(OUT_DIR, "wrist_corrected.stl")
     part.export(stl_path)
